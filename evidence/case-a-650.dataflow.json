@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "Vertical extent repair",
+    "output": "case-a-650.html",
+    "viewBox": [
+      940,
+      650
+    ],
+    "quality_profile": "standard"
+  },
+  "stages": [
+    {
+      "label": "Sources"
+    },
+    {
+      "label": "Process"
+    },
+    {
+      "label": "Serve"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "raw",
+      "stage": 0,
+      "row": 1,
+      "label": "Raw events",
+      "type": "frontend"
+    },
+    {
+      "id": "facts",
+      "stage": 1,
+      "row": 1,
+      "label": "Normalized facts",
+      "type": "backend"
+    },
+    {
+      "id": "api",
+      "stage": 2,
+      "row": 0,
+      "label": "Serving API",
+      "type": "backend",
+      "sublabel": "read path"
+    },
+    {
+      "id": "audit",
+      "stage": 2,
+      "row": 3,
+      "label": "Audit trail",
+      "type": "database"
+    }
+  ],
+  "flows": [
+    {
+      "from": "raw",
+      "to": "facts",
+      "label": "batch"
+    },
+    {
+      "from": "facts",
+      "to": "api",
+      "label": "publish"
+    },
+    {
+      "from": "facts",
+      "to": "audit",
+      "label": "replicate"
+    }
+  ]
+}
