@@ -11,6 +11,7 @@ Fixtures and receipts for the data-flow half of #468 (rebased revision `3256900`
 | `case-a-compacted` | same spec, `audit` `yOffset: -180` | repaired by moving the node: same chain all pass |
 | `case-b-before` | same canvas, `audit` height 156 | the required raise (700) is above the 606 ceiling: the raise is not offered, the message carries the predicted 1128px page |
 | `case-b-raised` | case-b with `meta.viewBox[1] = 700` anyway | the trap the gate avoids: `validate` passes, `browser-check` fails `viewer/viewport-overflow` at 1440×900 / 1600×1000 / 1920×1080 light and 1440×900 dark |
+| `case-a-650` | case-a with `meta.viewBox[1] = 650` (inside "at least 602", above the 606 ceiling) | the overshoot control: delivers fine, `browser-check` fails `viewer/viewport-overflow` at 1440×900 (scrollHeight 1079) — why the raise advice is a bounded range |
 
 ## Reproduction
 
