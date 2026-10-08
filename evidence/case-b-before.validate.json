@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "ok": false,
+  "command": "validate",
+  "stage": "render",
+  "type": "dataflow",
+  "input": "D:\\code\\github\\.archify-485rw\\evidence\\case-b-before.dataflow.json",
+  "error": "Data-flow layout validation failed:\n- Node \"audit\" exceeds the readable diagram area — keep y within [104, 290] so that y + height does not pass 446. Raising meta.viewBox[1] to 700 would fit the node, but the page then reaches at least ~1128px in the 1440x900 viewport, so the raise cannot stand on its own — compact the node instead.",
+  "diagnostics": [
+    {
+      "code": "dataflow/node-below-area",
+      "severity": "error",
+      "message": "Node \"audit\" exceeds the readable diagram area — keep y within [104, 290] so that y + height does not pass 446. Raising meta.viewBox[1] to 700 would fit the node, but the page then reaches at least ~1128px in the 1440x900 viewport, so the raise cannot stand on its own — compact the node instead.",
+      "subject": {
+        "diagramType": "dataflow",
+        "node": "audit"
+      },
+      "evidence": {
+        "y": 470,
+        "height": 156,
+        "areaBottom": 446,
+        "requiredViewBoxHeight": 700,
+        "requiredViewBoxFitsViewport": false,
+        "maximumViewBoxHeight": 606,
+        "requiredViewBoxPageHeightPx": 1128,
+        "viewBoxHeight": 520
+      },
+      "supportedFixes": [
+        "lower yOffset on node \"audit\""
+      ]
+    }
+  ]
+}

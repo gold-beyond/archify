@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "c2954c80-84d8-49e9-8063-0695ca26c99c",
+  "status": "current",
+  "command": "deliver",
+  "type": "dataflow",
+  "input": "D:\\code\\github\\.archify-485rw\\evidence\\case-b-raised.dataflow.json",
+  "output": "D:\\code\\github\\.archify-485rw\\evidence\\case-b-raised.html",
+  "specification": {
+    "sha256": "098333c32138ba9b19e5a402617b31167f8a13840e96c1414c365c90172fed5b",
+    "bytes": 1167
+  },
+  "artifact": {
+    "sha256": "a4d027e76953ac784b3e94fce2b7e1a96068c23423853a4f4b11f975f264c345",
+    "bytes": 761428
+  }
+}
