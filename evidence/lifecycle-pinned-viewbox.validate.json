@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "ok": false,
+  "command": "validate",
+  "stage": "render",
+  "type": "lifecycle",
+  "input": "D:\\code\\github\\.archify-485rw\\evidence\\lifecycle-pinned-viewbox.lifecycle.json",
+  "error": "lifecycle schema validation failed:\n  /meta must NOT have additional properties {\"additionalProperty\":\"viewBox\"}",
+  "diagnostics": [
+    {
+      "code": "schema/additionalProperties",
+      "severity": "error",
+      "message": "/meta must NOT have additional properties",
+      "subject": {
+        "diagramType": "lifecycle",
+        "path": "/meta"
+      },
+      "evidence": {
+        "keyword": "additionalProperties",
+        "additionalProperty": "viewBox"
+      },
+      "supportedFixes": [
+        "remove unsupported property \"viewBox\""
+      ]
+    }
+  ]
+}

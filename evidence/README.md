@@ -27,3 +27,11 @@ From a checkout of the archify skill at this revision:
 
 - `dataflow-repair-raised-1440x900.png` / `.dark.png` — `case-a-raised` at 1440×900.
 - `dataflow-repair-compacted-1440x900.png` / `.dark.png` — `case-a-compacted` at 1440×900.
+
+## Lifecycle half (why it is unchanged)
+
+On the PR's base (`dev`, `1dff447`), the lifecycle renderer derives its canvas from rendered geometry: `meta.viewBox` is not even a schema property any more, so a state cannot be pinned past a too-short canvas and the pre-v3 `585 → 658` repair has no surface.
+
+- `lifecycle-v3-derived.*` — the v3 example (10 states) validates with zero diagnostics; the delivered canvas is derived (`viewBox="0 0 1152 500"`, not authored); `browser-check` passes at 1440×900 / 1600×1000 / 1920×1080 / 2048×1320 light.
+- `lifecycle-pinned-viewbox.*` — the same spec with `meta.viewBox: [900, 585]` added: `validate` rejects it with `schema/additionalProperties`.
+
