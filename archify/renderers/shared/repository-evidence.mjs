@@ -25,6 +25,8 @@ function runGit(repoRoot, args) {
   const result = spawnSync('git', ['--no-replace-objects', '-C', repoRoot, ...args], {
     encoding: 'utf8',
     maxBuffer: MAX_SOURCE_BYTES,
+    // Older Git may ignore NO_LAZY_FETCH; no transport is needed for local reads.
+    env: { ...process.env, GIT_NO_LAZY_FETCH: '1', GIT_ALLOW_PROTOCOL: '' },
   });
   if (result.error) evidenceFailure('repository-evidence/git-unavailable', `Could not run Git: ${result.error.message}`, {
     evidence: { reason: result.error.message },
@@ -55,6 +57,7 @@ function readBatchObjects(repoRoot, objects, includeContent) {
   const result = spawnSync('git', ['--no-replace-objects', '-C', repoRoot, 'cat-file', mode], {
     input: objects.join('\n') + '\n',
     maxBuffer: 64 * 1024 * 1024,
+    env: { ...process.env, GIT_NO_LAZY_FETCH: '1', GIT_ALLOW_PROTOCOL: '' },
   });
   if (result.error || result.status !== 0 || !Buffer.isBuffer(result.stdout)) return null;
   const buffer = result.stdout;
@@ -306,6 +309,21 @@ export function verifyRepositoryEvidence(diagramType, diagram, repoRootInput) {
           return type.status === 0 && type.stdout.trim() === 'blob';
         })();
       if (!objectIsBlob) {
+        // A promisor blob can exist in the pinned tree without being stored
+        // locally. Do not tell the caller to change a correct source path.
+        const tree = runGit(realRoot, ['ls-tree', '-z', revision, '--', source.path]);
+        const knownBlob = tree.status === 0 && tree.stdout.split('\0').some((entry) => {
+          const separator = entry.indexOf('\t');
+          return entry.slice(separator + 1) === source.path
+            && /^\d+ blob [a-f0-9]+$/.test(entry.slice(0, separator));
+        });
+        if (knownBlob) {
+          evidenceFailure('repository-evidence/object-unavailable', `${where} exists at revision ${revision}, but its content is unavailable in the local repository.`, {
+            subject: { path: where, ...nodeSubject },
+            evidence: { sourcePath: source.path, revision },
+            supportedFixes: ['explicitly fetch the pinned source objects into the local checkout, then retry verification'],
+          });
+        }
         evidenceFailure('repository-evidence/file-missing', `${where} does not identify a file at revision ${revision}.`, {
           subject: { path: where, ...nodeSubject },
           evidence: { sourcePath: source.path, revision },
