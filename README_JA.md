@@ -8,6 +8,8 @@
 
 <p align="center"><img src="docs/assets/archify-readme-hero.png" alt="Archify — インタラクティブな図" width="960" /></p>
 
+<p align="center"><strong>公式リンク：</strong> <a href="https://archify.si">archify.si</a> · <a href="https://github.com/tt-a1i/archify">GitHub</a><br/>Archify は無料のオープンソースプロジェクトです。第三者のオンラインサービスや有料プランは各運営者が提供するもので、Archify の公式サービスではありません。 <a href="#official-services">詳細 →</a></p>
+
 <p align="center">アイデア、疑問、計画のどれから始めても構いません。AI エージェントに説明すれば、Archify が探索・カスタマイズ・共有できるインタラクティブな HTML を生成します。旅行の行程や学習マップから複雑なシステムまで、あなた自身のものに作り込めます。</p>
 
 <p align="center">コミュニティが何を作っているかを見て、自分なら次に何を作れるかを考えてみてください。</p>
@@ -352,7 +354,7 @@ node bin/archify.mjs deliver workflow examples/agent-tool-call.workflow.json /tm
 | ビジュアルスタイルを選択（`S` で循環）/ テーマ切り替え / Export を開く | <kbd>S</kbd> / <kbd>T</kbd> / <kbd>E</kbd> |
 | ズーム / リセット | <kbd>+</kbd> / <kbd>-</kbd> / <kbd>0</kbd> |
 
-安定したリンクで `#focus=<id>`、`#focus=<id>&reach=upstream|downstream`、`#relation=<id>`、`#route=<source>~<target>`、`#lens=<kind>~<kind>` を復元できます。読み手が起動するモーションは有限で、`prefers-reduced-motion` を尊重し、正規のエクスポートには含まれません。
+安定したリンクで `#focus=<id>`、`#focus=<id>&reach=upstream|downstream`、`#relation=<id>`、`#route=<source>~<target>`、`#lens=<kind>~<kind>` を復元できます。Live は一時停止するまで接続の流れを繰り返し、意味的なプレビューは有限のままです。モーションは `prefers-reduced-motion` を尊重し、正規のエクスポートには含まれません。
 
 生成とビューアの完全な仕様は [`archify/SKILL.md`](archify/SKILL.md) にあります。
 
@@ -393,6 +395,14 @@ Mermaid の自動パース、汎用オートレイアウト、ホスティング
   <td align="center"><strong><img src="docs/assets/community/qq.svg" alt="" width="18" /> QQ</strong><br/><img src="docs/assets/community/qq-qr.png" alt="Archify Official QQ group QR code" width="300" height="300" /></td>
 </tr>
 </table>
+
+<a id="official-services"></a>
+
+## 公式リンクと第三者サービス
+
+- **オープンソースプロジェクト：** ソースコードとインストールパッケージは [MIT ライセンス](LICENSE)に従って無料で利用できます。
+- **公式サイト：** [archify.si](https://archify.si) は現在、プロジェクトの紹介、サンプル、インストール手順を提供しています。
+- **第三者サービス：** 料金、データの取り扱い、サポートは各運営者が決定します。名称やドメインが似ていても、公式の提携を意味するものではありません。
 
 ## ライセンス
 

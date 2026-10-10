@@ -2,6 +2,7 @@
 
 import fs from 'node:fs';
 import { analyzeSvgPath } from '../renderers/shared/svg-path-analysis.mjs';
+import { textUnits } from '../renderers/shared/utils.mjs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { collectAmbiguousCorridors, collectArrowheadCollisions, collectBorderRuns, collectLabelCanvasOverflow, collectLabelRouteClearance, collectRouteRhythmIssues, describeLabelCanvasOverflow, formatRect, forwardCollinearAnalysisSegments, minimumLabelRouteClearance, normalizeRoutePoints, routeBudgetMetrics } from '../renderers/shared/geometry.mjs';
@@ -949,7 +950,7 @@ function collectSequenceColumnSpace({ svgAttrs, fragment, nodeRects, arrows }) {
   const columnFit = svgAttrs['data-sequence-column-fit'];
   if (!['fixed', 'spread'].includes(columnFit)) return null;
   const evidence = { measured: false, reviewSuggested: false, columnFit };
-  if (svgAttrs.transform || /<tspan\b/i.test(fragment)) return evidence;
+  if (svgAttrs.transform) return evidence;
   // Brand badges stay inside their participant box. Ignore only that subtree's
   // transforms, including the preset path or nested fallback icon's scale.
   const brandGroups = [];
@@ -985,9 +986,19 @@ function collectSequenceColumnSpace({ svgAttrs, fragment, nodeRects, arrows }) {
     rightEdges.push(numberAttr(attrs, 'x') + numberAttr(attrs, 'width'));
   }
   for (const match of fragment.matchAll(/<text\b([^>]*)>([\s\S]*?)<\/text>/gi)) {
-    const box = textBox(parseAttrs(match[1]), stripTags(match[2]).trim());
-    if (!box) return evidence;
-    rightEdges.push(box.x2);
+    const attrs = parseAttrs(match[1]);
+    // A wrapped note places each line in a <tspan> with its own x. Any other
+    // line offset is not measured here.
+    const lines = /<tspan\b/i.test(match[2])
+      ? [...match[2].matchAll(/<tspan\b([^>]*)>([\s\S]*?)<\/tspan>/gi)]
+        .map((line) => ({ attrs: { ...attrs, ...parseAttrs(line[1]) }, text: stripTags(line[2]).trim() }))
+      : [{ attrs, text: stripTags(match[2]).trim() }];
+    if (!lines.length || lines.some((line) => line.attrs.dx !== undefined)) return evidence;
+    for (const line of lines) {
+      const box = textBox(line.attrs, line.text);
+      if (!box) return evidence;
+      rightEdges.push(box.x2);
+    }
   }
   if (!rightEdges.every(Number.isFinite)) return evidence;
   const occupiedRight = Math.max(...rightEdges);
@@ -1056,7 +1067,7 @@ function collectLegendBoxes(fragment) {
 
   for (const match of fragment.matchAll(/<text\b([^>]*)>([\s\S]*?)<\/text>/gi)) {
     const attrs = parseAttrs(match[1]);
-    const box = textBox(attrs, stripTags(match[2]).trim());
+    const box = textBox(attrs, stripTags(match[2]).trim(), legendTextWidth);
     if (box) boxes.push(box);
   }
 
@@ -1077,12 +1088,20 @@ function collectLegendCollisions(arrows, boxes) {
   return collisions;
 }
 
-function textBox(attrs, text) {
+// The footprint a legend entry reserves is the renderer's own: textUnits() at
+// TEXT_ADVANCE_EM (renderers/shared/legend.mjs). The default estimate below stays
+// as it is for the readability projection, which is deliberately conservative.
+function legendTextWidth(text, fontSize) {
+  const TEXT_ADVANCE_EM = 0.62;
+  return Math.max(fontSize, textUnits(text) * fontSize * TEXT_ADVANCE_EM);
+}
+
+function textBox(attrs, text, measure = estimatedTextWidth) {
   const x = numberAttr(attrs, 'x');
   const y = numberAttr(attrs, 'y');
   const fontSize = Number.parseFloat(attrs['font-size'] || '10');
   if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(fontSize)) return null;
-  const width = estimatedTextWidth(text, fontSize);
+  const width = measure(text, fontSize);
   const anchor = attrs['text-anchor'] || 'start';
   let x1 = x;
   if (anchor === 'middle') x1 = x - width / 2;

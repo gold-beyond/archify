@@ -18,7 +18,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { minimumReadableSourceTextPx } from '../archify/renderers/shared/desktop-readability.mjs';
-import { segmentRectClearanceWithin } from '../archify/renderers/shared/geometry.mjs';
+import { segmentRectClearanceWithin, segmentIntersectsRect } from '../archify/renderers/shared/geometry.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const skillRoot = path.resolve(__dirname, '..', 'archify');
@@ -1537,12 +1537,30 @@ function autoRoutePassThroughDocument(connection) {
   };
 }
 
+function assertAutomaticRoute(html, from, to, obstacles = []) {
+  const encoded = html.match(/data-composition-points="([^"]+)"/)?.[1];
+  assert.ok(encoded, 'expected a rendered route');
+  const points = encoded.split(';').map(point => point.split(',').map(Number));
+  assert.ok(points.length >= 2 && points.every(point => point.length === 2 && point.every(Number.isFinite)));
+  assert.deepEqual(points[0], from, 'route must attach to its source port');
+  assert.deepEqual(points.at(-1), to, 'route must attach to its target port');
+  for (let i = 1; i < points.length; i++) {
+    const start = points[i - 1];
+    const end = points[i];
+    assert.ok((start[0] === end[0]) !== (start[1] === end[1]), 'route segments must be nonzero and orthogonal');
+    for (const obstacle of obstacles) {
+      assert.equal(segmentIntersectsRect({ start, end }, obstacle), false, 'route must avoid unrelated nodes');
+    }
+  }
+  return points;
+}
+
 test('architecture: default auto route selects a safe orthogonal candidate around an unrelated component', () => {
   const d = autoRoutePassThroughDocument({ from: 'api', to: 'queue', variant: 'dashed' });
   const { code, stderr, outPath } = render('architecture', d);
   assert.equal(code, 0, stderr);
   const html = fs.readFileSync(outPath, 'utf8');
-  assert.match(html, /data-composition-points="560,318;856,318;856,160;880,160"/);
+  assertAutomaticRoute(html, [560, 318], [880, 160], [{ x: 645, y: 130, width: 130, height: 60 }]);
 });
 
 test('architecture: aligned automatic endpoints still route around an unrelated component', () => {
@@ -1581,7 +1599,11 @@ test('architecture: auto route enters explicit top and bottom ports perpendicula
   const { code, stderr, outPath } = render('architecture', d);
   assert.equal(code, 0, stderr);
   const html = fs.readFileSync(outPath, 'utf8');
-  assert.match(html, /data-composition-points="350,160;350,200;150,200;150,240"/);
+  const points = assertAutomaticRoute(html, [350, 160], [150, 240]);
+  assert.equal(points[1][0], 350, 'leave the bottom port vertically');
+  assert.ok(points[1][1] > 160, 'leave downward');
+  assert.equal(points.at(-2)[0], 150, 'enter the top port vertically');
+  assert.ok(points.at(-2)[1] < 240, 'enter from above');
 });
 
 test('architecture: auto route preserves inferred side normals when the primary dogleg is blocked', () => {
@@ -1602,8 +1624,14 @@ test('architecture: auto route preserves inferred side normals when the primary 
   const { code, stderr, outPath } = render('architecture', d);
   assert.equal(code, 0, stderr);
   const html = fs.readFileSync(outPath, 'utf8');
-  assert.match(html, /data-composition-points="700,130;184,130;184,330;160,330"/);
-  assert.doesNotMatch(html, /data-composition-points="700,130;700,230;160,230;160,330"/);
+  const points = assertAutomaticRoute(html, [700, 130], [160, 330], [
+    { x: 220, y: 300, width: 120, height: 60 },
+    { x: 400, y: 300, width: 120, height: 60 },
+  ]);
+  assert.equal(points[1][1], 130, 'leave the inferred left port horizontally');
+  assert.ok(points[1][0] < 700, 'leave leftward');
+  assert.equal(points.at(-2)[1], 330, 'enter the inferred right port horizontally');
+  assert.ok(points.at(-2)[0] > 160, 'enter from the right');
 });
 
 test('architecture: auto route finds a multi-bend path when both side-safe doglegs are blocked', () => {
@@ -2028,7 +2056,7 @@ test('sequence: lifelines and activation bars remain intentional pass-through ge
   assert.doesNotMatch(stderr, /Clean Flow Gate/);
 });
 
-test('sequence: segment titles render as foreground badges above their borders', () => {
+test('sequence: segment titles render as foreground badges near their borders and clear of headers', () => {
   const d = load('sequence');
   const { code, stderr, outPath } = render('sequence', d);
   assert.equal(code, 0, stderr);
@@ -2038,10 +2066,26 @@ test('sequence: segment titles render as foreground badges above their borders',
   const activationsAt = html.indexOf('<!-- Activations -->');
   const messagesAt = html.indexOf('<!-- Messages -->');
 
-  assert.ok(segmentLabelsAt > activationsAt, 'segment labels should stay above lifelines, messages, and activations');
+  assert.ok(segmentLabelsAt > messagesAt, 'segment labels should stay above lifelines, messages, and activations');
   assert.ok(messagesAt > activationsAt, 'message arrows and labels should stay above activation bars');
-  assert.match(html, new RegExp(`data-graph-role="segment-label"[^>]*data-segment-id="0"`));
-  assert.match(html, new RegExp(`<text x="62" y="${firstSegment.from - 9}"[^>]*>${firstSegment.label}</text>`));
+  const badge = html.match(/<g data-graph-role="segment-label" data-segment-id="0">([\s\S]*?)<\/g>/);
+  assert.ok(badge, 'the first phase keeps its foreground badge');
+  assert.match(badge[1], new RegExp(`<text [^>]*>${firstSegment.label}</text>`), 'the full phase title stays visible');
+  const mask = badge[1].match(/<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"[^>]*class="c-mask"/);
+  assert.ok(mask, 'the title keeps a background mask above the frame');
+  const [x, y, width, height] = mask.slice(1).map(Number);
+  assert.ok(y <= firstSegment.from && y + height >= firstSegment.from - 4,
+    'the automatic title remains attached to its own top border');
+  assert.ok(y + height < firstSegment.to, 'the title does not drift beyond its own phase');
+
+  const headers = [...html.matchAll(/<g [^>]*data-node-id="[^"]+"[^>]*>[\s\S]*?<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"[^>]*class="c-mask"/g)];
+  assert.equal(headers.length, d.participants.length, 'all participant header masks are checked');
+  for (const header of headers) {
+    const [headerX, headerY, headerWidth, headerHeight] = header.slice(1).map(Number);
+    const overlap = x < headerX + headerWidth && x + width > headerX
+      && y < headerY + headerHeight && y + height > headerY;
+    assert.equal(overlap, false, 'the full title badge clears participant cards, not only their main labels');
+  }
 });
 
 test('sequence: segment title badge clears a nearby first message label', () => {
